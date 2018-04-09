@@ -1,0 +1,3 @@
+[submodule "notificator"]
+	path = notificator
+	url = https://github.com/a-maumau/notificator.git
