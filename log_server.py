@@ -101,7 +101,6 @@ class Server(object):
             except socket.error as e:
                 err = e.args[0]
                 if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                    #print('No data available')
                     time.sleep(.5)
                     continue
                 else:
@@ -109,18 +108,15 @@ class Server(object):
                     print(e)
                     sys.exit(1)
             else:
-                #if name in users:
-                #    conn.send("Name entered is already in use.\n".encode('utf-8'))
-                
                 conn.setblocking(False)
                 self.connections.append(User("anonymous", ip_addr, port_num, conn))
                 if "all" in resp:
                     logs = self.log_file.readlines()
+                    # return to head
+                    self.log_file.seek(0)
+                    
                     for line in logs:
                         conn.send("{}".format(line).encode('utf-8'))
-
-                # return to head
-                self.log_file.seek(0)
 
                 break
 
@@ -134,8 +130,6 @@ class Server(object):
             except socket.error as e:
                 err = e.args[0]
                 if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                    #print('No data available')
-                    time.sleep(.2)
                     continue
                 else:
                     # a "real" error occurred
