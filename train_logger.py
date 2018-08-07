@@ -5,6 +5,8 @@ import threading
 import random
 import pickle
 
+from log_server import Server
+
 HAS_TB = True
 HAS_GS_ENNV = True
 HAS_NOTI = True
@@ -168,6 +170,7 @@ class TrainLogger(object):
         self.gs_logger = None
         self.gs = None
         self.notificator = None
+        self.log_server = None
 
         self.msg_filename = None
         self.csv_filename = None
@@ -261,11 +264,13 @@ class TrainLogger(object):
             if self.blocking is False, it will log with another thread
         """
 
+        logging_message = self._build_log_message("[{}]".format(datetime.now().strftime("%Y%m%d_%H-%M-%S")) if use_timestamp else "", "[{}]".format(msg_tag), msg)
+
         if self.blocking:
-                self._log_msg(msg, msg_tag, use_timestamp)
+                self._log_msg(logging_message)
         else:
             try:
-                th = threading.Thread(target=self._thread_log_msg, args=(msg, msg_tag, use_timestamp,))
+                th = threading.Thread(target=self._thread_log_msg, args=(logging_message,))
                 th.start()
             except Exception as e:
                 # for it's a critical part, I won't suppress here
@@ -291,6 +296,10 @@ class TrainLogger(object):
 
                 elif p.lower() == "twitter":
                     self.notificator.setTwitter()
+
+    def set_server(self, bind_host, bind_port, listen_number=8, blocking=False):
+        self.log_server = Server(os.path.join(self.log_dir, self.msg_filename), bind_host, bind_port, listen_number, blocking)
+        self.log_server.start(use_thread=True)
 
     def disable_pickle_object(self):
         # if you not want to save dictonary object of log.
@@ -364,6 +373,9 @@ class TrainLogger(object):
         if self.tb_logger is not None:
             self.tb_logger.close()
 
+        if self.log_server is not None:
+            self.log_server.stop()
+
     def _csv_header(self, keys):
         for key in keys:
             if key != keys[0]:
@@ -394,21 +406,27 @@ class TrainLogger(object):
         if self.gs is not None:
             self._log_gs(data)
 
-    def _log_msg(self, msg, msg_tag="MSG", use_timestamp=True):
+    def _log_msg(self, msg):
         if self.use_pickle_obj:
-            self._log_msg_dic(msg, msg_tag, use_timestamp)
+            self._log_msg_dic(msg)
 
-        self._log_msg_file(msg, msg_tag, use_timestamp)
+        if self.log_server is not None:
+            self.log_server.log(msg)
+
+        self._log_msg_file(msg)
 
     def _thread_log(self, data):
         for d in data:
             self._log(d)
 
-    def _thread_log_msg(self, msg, msg_tag="MSG", use_timestamp=True):
+    def _thread_log_msg(self, msg):
         if self.use_pickle_obj:
-            self._log_msg(msg, msg_tag, use_timestamp)
+            self._log_msg(msg)
 
-        self._log_msg_file(msg, msg_tag, use_timestamp)
+        if self.log_server is not None:
+            self.log_server.log(msg)
+
+        self._log_msg_file(msg)
 
     def _log_dic(self, data, msg_tag="MSG", use_timestamp=True):
         assert len(self.header) == len(data), "keys and data has not same length."
@@ -419,13 +437,11 @@ class TrainLogger(object):
         for key, val in zip(self.header, data):
             self.log_dict[self.log_dict_key][-1][key] = val
 
-    def _log_msg_dic(self, msg, msg_tag="MSG", use_timestamp=True):
-        logging_message = self._build_log_message("[{}]".format(datetime.now().strftime("%Y%m%d_%H-%M-%S")) if use_timestamp else "", "[{}]".format(msg_tag), msg)
+    def _log_msg_dic(self, msg):
         self.log_dict[self.log_dict_key].append(msg)
 
-    def _log_msg_file(self, msg, msg_tag="MSG", use_timestamp=True):
-        logging_message = self._build_log_message("[{}]".format(datetime.now().strftime("%Y%m%d_%H-%M-%S")) if use_timestamp else "", "[{}]".format(msg_tag), msg)
-        self.msg_logger.write(logging_message)
+    def _log_msg_file(self, msg):
+        self.msg_logger.write(msg)
         self.msg_logger.write("\n")
         if self.flush_always:
             self.msg_logger.flush()
