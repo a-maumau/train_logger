@@ -5,7 +5,7 @@ import threading
 import random
 import pickle
 
-from log_server import Server
+from .log_server import Server
 
 HAS_TB = True
 HAS_GS_ENNV = True
@@ -324,8 +324,7 @@ class TrainLogger(object):
 
     def set_default_tbkeys(self, keys):
         """
-            tensorboeard has different namespace system,
-            I separete it.
+            tensorboeard has different namespace system
         """
         if self.use_tb:
             self.set_tbkey = True
