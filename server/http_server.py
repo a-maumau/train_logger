@@ -221,8 +221,6 @@ def fetch_update(json_data, log_dir):
 
     return_data = {"log_data":[], "output_data":[], "new_data":[]}
 
-    print(json_data)
-
     for log_name in json_data["log"]:
         return_data["log_data"].append(fetch_csv_data(log_name, os.path.join(log_dir, log_name), json_data["log"][log_name]))
 
