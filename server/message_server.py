@@ -23,7 +23,7 @@ class User(object):
     def send(self, msg):
         self.conn.send(msg)
 
-class Server(object):
+class MessageLogServer(object):
     MAX_RECIEVE_BYTE = 4096
 
     def __init__(self, log_file_path, bind_host, bind_port, listen_number=8, blocking=False):
@@ -85,13 +85,19 @@ class Server(object):
 
     def log(self, msg):
         for user in self.connections:
-            user.send("{}\n".format(msg).encode('utf-8'))
+            try:
+                user.send("{}\n".format(msg).encode('utf-8'))
+            except:
+                pass
 
     def accept(self):
         conn, (ip_addr, port_num) = self.server.accept()
         
         accept_thread = threading.Thread(target=self.__thread_accept, args=(conn, ip_addr, port_num))
         accept_thread.start()
+
+    def get_bind_info(self):
+        return self.server.getsockopt()
 
     # avoid blocking
     def __thread_accept(self, conn, ip_addr, port_num):
