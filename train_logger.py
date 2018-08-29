@@ -164,7 +164,7 @@ class TrainLogger(object):
         if self.git_info is None:
             try:
                 repo = git.Repo(search_parent_directories=True)
-                curr_branch = repo.active_branch
+                curr_branch = str(repo.active_branch)
                 sha = repo.head.object.hexsha
                 self.git_info = {"branch_name":curr_branch, "branch_hash":sha}
             except:
