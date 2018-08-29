@@ -12,7 +12,7 @@ try:
     from jinja2 import FileSystemLoader
 except:
     SERVER_MODULE_MISSING = True
-    
+
 from PIL import Image
 
 from ..utilities.path_util import isdir, isexist
@@ -302,7 +302,7 @@ class APIView(FlaskView):
         # only when POSTed data is valid json, get_json method return the data otherwise None
         #print(request.headers)
         self.log_settings = request.get_json()
-        print(self.log_settings)
+        #print(self.log_settings)
         return json.dumps({"status":"OK"})
 
 class MainView(FlaskView):
