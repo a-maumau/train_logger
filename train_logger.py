@@ -7,6 +7,7 @@ import yaml
 
 from .global_names import global_names
 from .logger import LogWriter, OutputWriter
+from .server import http_server
 from .server.http_server import HTTPServer
 from .server.message_server import MessageLogServer
 from .utilities.path_util import mkdir
@@ -204,18 +205,21 @@ class TrainLogger(object):
                 color_print("starting with out message server.", terminal_color.fg.WHITE, terminal_color.bg.RED)
 
     def start_http_server(self, bind_host="127.0.0.1", bind_port=8080):
-        self.http_bind_host=bind_host
-        self.http_bind_port=bind_port
+        if not http_server.SERVER_MODULE_MISSING:
+            self.http_bind_host=bind_host
+            self.http_bind_port=bind_port
 
-        color_print("trying to start http server...", terminal_color.fg.BLACK, terminal_color.bg.GREEN)
-        try:
-            self.http_server = HTTPServer(log_dir=self.log_dir, bind_host=self.http_bind_host, bind_port=self.http_bind_port, quiet=True)
-            self.http_server.start(use_thread=True)
+            color_print("trying to start http server...", terminal_color.fg.BLACK, terminal_color.bg.GREEN)
+            try:
+                self.http_server = HTTPServer(log_dir=self.log_dir, bind_host=self.http_bind_host, bind_port=self.http_bind_port, quiet=True)
+                self.http_server.start(use_thread=True)
 
-        except Exception as e:
-            if not self.suppress_err:
-                print_error(e)
-                color_print("starting with out http server.", terminal_color.fg.WHITE, terminal_color.bg.RED)
+            except Exception as e:
+                if not self.suppress_err:
+                    print_error(e)
+                    color_print("starting with out http server.", terminal_color.fg.WHITE, terminal_color.bg.RED)
+        else:
+            color_print("module missing, failed to start http server.", terminal_color.fg.WHITE, terminal_color.bg.RED)
 
     def set_notificator(self, params=["mail", "slack", "twitter"]):
         try:
@@ -229,8 +233,8 @@ class TrainLogger(object):
 
                     elif p.lower() == "twitter":
                         self.notificator.setTwitter()
-        except:
-            pass
+        except Exception as e:
+            self.log_message("{}".format(e), "ERROR, INTERNAL", "train_logger::notificate")
 
     def notify(self, msg, use_thread=True):
         """
@@ -268,10 +272,10 @@ class TrainLogger(object):
                     th = threading.Thread(target=self.__log_msg, args=(log_message,))
                     th.start()
                 except Exception as e:
-                    # for it's a critical part, I won't suppress here
-                    import traceback
-                    traceback.print_exc()
-                    print(e)
+                    if not self.suppress_err:
+                        import traceback
+                        traceback.print_exc()
+                        print(e)
             else:
                 self.msg_server.log(log_message)
 
