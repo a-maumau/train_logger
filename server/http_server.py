@@ -5,11 +5,14 @@ import re
 import threading
 import traceback
 
-import base64
-from flask import Flask, render_template, redirect, request
-from flask_classful import FlaskView, route
-from jinja2 import FileSystemLoader
-
+SERVER_MODULE_MISSING = False
+try:
+    from flask import Flask, render_template, redirect, request
+    from flask_classful import FlaskView, route
+    from jinja2 import FileSystemLoader
+except:
+    SERVER_MODULE_MISSING = True
+    
 from PIL import Image
 
 from ..utilities.path_util import isdir, isexist
