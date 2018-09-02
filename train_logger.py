@@ -195,7 +195,7 @@ class TrainLogger(object):
             self.msg_server = MessageLogServer(os.path.join(self.log_save_path, self.msg_filename),
                                                self.msg_bind_host, self.msg_bind_port, 8, blocking=False)
             self.msg_server.start(use_thread=True)
-            color_print("hosted on {host}:{port}".format(host=self.msg_bind_host, port=self.msg_bind_port),
+            color_print("message server hosted on {host}:{port}".format(host=self.msg_bind_host, port=self.msg_bind_port),
                         terminal_color.fg.BLACK,
                         terminal_color.bg.GREEN)
 
@@ -206,13 +206,16 @@ class TrainLogger(object):
 
     def start_http_server(self, bind_host="127.0.0.1", bind_port=8080):
         if not http_server.SERVER_MODULE_MISSING:
-            self.http_bind_host=bind_host
+            self.http_bind_host=bind_host if bind_host != "" else "0.0.0.0"
             self.http_bind_port=bind_port
 
             color_print("trying to start http server...", terminal_color.fg.BLACK, terminal_color.bg.GREEN)
             try:
                 self.http_server = HTTPServer(log_dir=self.log_dir, bind_host=self.http_bind_host, bind_port=self.http_bind_port, quiet=True)
                 self.http_server.start(use_thread=True)
+                color_print("http server hosted on {host}:{port}".format(host=self.http_bind_host, port=self.http_bind_port),
+                            terminal_color.fg.BLACK,
+                            terminal_color.bg.GREEN)
 
             except Exception as e:
                 if not self.suppress_err:

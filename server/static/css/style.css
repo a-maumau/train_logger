@@ -68,6 +68,11 @@
 
 	--timeline-entry-title-width: 243px;
 	--timeline-entry-title-right-bar-right-pos: 266px;
+
+	--output-img-height: 180px;
+
+	--fg-color-timelin-logname: #fff;
+	--bg-color-timelin-logname: #fe7f00;
 }
 /*
 :root {
@@ -915,6 +920,11 @@ h1 a {
 /*
 	timeline
 */
+.timeline-wrapper{
+	border-bottom: 1px solid #ddd;
+	padding-bottom: 5px;
+}
+
 .timeline-wrapper h2{
 	font-size: 180%;
 	padding: 10px 0px 10px 10px;
@@ -922,13 +932,13 @@ h1 a {
 	border-bottom: 3px solid var(--timeline-head-border-color);
 }
 .timeline-box{
-  height: 50vh;
+  /*height: 50vh;*/
   min-height: 150px;
   max-height: 500px;
   width: 100%;
-  overflow-y: scroll;
+  /**/
+  /*overflow-y: scroll;*/
   padding-bottom: 10px;
-  border-bottom: 1px solid #ddd;
 }
 .timeline {
   display: table;
@@ -1020,6 +1030,10 @@ h1 a {
 /*
 	luminous
 */
+img.thumbnail{
+	height: var(--output-img-height);
+}
+
 .lumnous-imgbox{
   display:-webkit-box; /* fallback old Android */
   display:-ms-flexbox; /* fallback ie10 */
@@ -1081,4 +1095,60 @@ h1 a {
 }
 .zoom-in {
 	cursor: zoom-in;
+}
+
+/*
+	timeline accordion
+*/
+.timeline-ac-container{
+}
+.timeline-ac-container label{
+}
+.timeline-ac-container label:hover{
+    background: rgba( 255, 155, 155, 0.55 );
+    -webkit-transition: all .3s;
+    transition: all .3s;
+}
+.timeline-ac-container label:hover h2{
+	color: var(--fg-color-timelin-logname);
+    background: var(--bg-color-timelin-logname);
+    -webkit-transition: all .3s;
+    transition: all .3s;
+}
+
+/*
+.timeline-ac-container label:after{
+ color: #fff;
+    font-family:"FontAwesome";
+    content:"\f067";
+}
+.timeline-ac-container input:checked ~ label::after {
+ color: #fff;
+   font-family:"FontAwesome";
+   content:"\f068";
+}
+*/
+.timeline-ac-container input{
+   display: none;
+}
+.timeline-ac-container div.timeline-ac-content{
+   background: rgba(255, 255, 255, 0.5);
+   margin-top: -1px;
+   height: 0px;
+   position: relative;
+   overflow-y: hidden;
+   z-index: 10;
+   transition: 
+   height 0.3s ease-in-out, 
+   box-shadow 0.4s linear;
+}
+.timeline-ac-container input:checked ~ div.timeline-ac-content{
+   transition: 
+   height 0.5s ease-in-out, 
+   box-shadow 0.1s linear;
+   box-shadow: 0px 0px 0px 1px rgba(155,155,155,0.3);
+   overflow-y: scroll;
+}
+.timeline-ac-container input:checked ~ div.timeline-ac-content{
+	height: 50vh;
 }

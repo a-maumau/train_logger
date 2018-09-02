@@ -4,10 +4,17 @@
 var global_log_data = {};
 var global_log_lut = {};
 var global_settings = {"chart_number":0, "chart_current_id":null, "chart_log_pair":{"not_on_chart":[]}};
+
+// chart instance will be save like {"chart0":chart_obj, "chart1":... }
 var global_charts = {};
+
+
 var global_known_log = {};
+
+// for witch data to featch from server, in this array means fetch data
 var global_watch_list = [];
 var global_load_output_list = [];
+
 var global_loaded_history = {"log":{}, "output":{}};
 var global_fetch_update_go = true;
 var global_update_re_request = false;
@@ -150,7 +157,7 @@ function create_html_element(json_data){
 
 function init_charts(){
     for(let n = 0; n < global_settings["chart_current_id"]+1; n++){
-        var tmp_chart = c3.generate({bindto:"#chart"+n,data:{xs:{},columns:[]},color:{},axis:{x:{label: 'X Label'},y:{label:'Y Label'},y2:{show: true,label: 'Y2 Label'}},zoom:{enabled:true}});
+        var tmp_chart = c3.generate({bindto:"#chart"+n,data:{xs:{},columns:[]},color:{},axis:{x:{label: 'X Label'},y:{label:'Y Label'},y2:{show: true,label: 'Y2 Label'}},zoom:{enabled:true},title: {show: false,text: "chart"+n, position: 'top-center',padding: {top: 0,right: 0,bottom: 0,left: 0}}});
         for(let index in global_settings["chart_log_pair"]["chart"+n]){
             log_data_name = global_settings["chart_log_pair"]["chart"+n][index];
 
@@ -165,6 +172,10 @@ function init_charts(){
                     ],
                     color: { pattern: ['#ff7700']},
                 });
+                //d3.select('#chart'+n+' .c3-title').style('font-size', '4em');
+                
+                // https://stackoverflow.com/questions/45142519/c3-js-chart-title-overlapped-if-i-change-the-size-of-title
+                //d3.select('#chart'+n+' .c3-title').style('font-size', '2em').style("dominant-baseline", "central");
             }
         }
         global_charts["chart"+n] = tmp_chart;
@@ -356,23 +367,25 @@ function update_csv_data(log_json_data){
                     csv_per_line = csv_lines[i].split(",");
 
                     // exclude only \n line
-                    if(csv_per_line.length == headers.length){
-                        for(let col = 0; col < csv_per_line.length; col++){
-                            global_log_data[key_log_name+namespace_separator+key_namespace+namespace_separator+headers[col]].push(csv_per_line[col]);
-                        }
+                    //if(csv_per_line.length == headers.length){
+                    for(let col = 0; col < csv_per_line.length; col++){
+                        global_log_data[key_log_name+namespace_separator+key_namespace+namespace_separator+headers[col]].push(csv_per_line[col]);
                     }
+                    //}
                 }
                 global_loaded_history["log"][key_log_name][key_namespace]["read_csv"] += csv_lines.length-1; // -1, because header is included.
                 
-                for(let i = 1; i < headers.length; i++) {
-                    log_data_name = key_log_name+namespace_separator+key_namespace+namespace_separator+headers[i]
-                    global_charts[global_log_lut[log_data_name]["chart"]].load({
-                        xs: {[log_data_name]: global_log_lut[log_data_name]["x_axis"]},
-                        columns: [
-                            global_log_data[global_log_lut[log_data_name]["x_axis"]],
-                            global_log_data[log_data_name]
-                        ],
-                    });
+                if(csv_lines.length > 1){
+                    for(let i = 1; i < headers.length; i++) {
+                        log_data_name = key_log_name+namespace_separator+key_namespace+namespace_separator+headers[i]
+                        global_charts[global_log_lut[log_data_name]["chart"]].load({
+                            xs: {[log_data_name]: global_log_lut[log_data_name]["x_axis"]},
+                            columns: [
+                                global_log_data[global_log_lut[log_data_name]["x_axis"]],
+                                global_log_data[log_data_name]
+                            ],
+                        });
+                    }
                 }
             }
         }
@@ -390,12 +403,13 @@ function update_output(output_json_data){
 
             if($(".timeline-wrapper#"+key_log_name).size() == false){
                 $(function() {
-                    $("#content2").append("<div class=\"timeline-wrapper\" id=\""+key_log_name+"\"><h2>"+key_log_name+"</h2><div class=\"timeline-box\"><div class=\"timeline\"><div class=\"timeline-entry\"><div class=\"timeline-title\"><h3>Output Name</h3><p>description/tag</p></div><div class=\"timeline-body\"><p>Output Contents</p><ul><li>image/text</li></ul></div></div></div></div></div>");
+                    $("#content2").append("<div class=\"timeline-wrapper\" id=\""+key_log_name+"\"><div class=\"timeline-ac-container\"><input id=\""+key_log_name+"_ac\" type=\"checkbox\" checked /><label for=\""+key_log_name+"_ac\"><h2>"+key_log_name+"</h2></label><div class=\"timeline-ac-content\"><div class=\"timeline-box\"><div class=\"timeline\"><div class=\"timeline-entry\"><div class=\"timeline-title\"><h3>Output Name</h3><p>description/tag</p></div><div class=\"timeline-body\"><p>Output Contents</p><ul><li>image/text</li></ul></div></div></div></div></div></div></div>");
                 });
             }
 
             for(let output_data_index in output_data_array){
                 output_data = output_data_array[output_data_index];
+
                 html_element = "<div class=\"timeline-entry\"><div class=\"timeline-title\"><h3>"+output_data["output_name"]+"</h3><p>"+output_data["output_desc"]+"</p></div><div class=\"timeline-body\"><div class=\"luminous-imgbox\">";
 
                 add_image_ids = [];
@@ -405,8 +419,10 @@ function update_output(output_json_data){
 
                     for(let img_index in each_output["images"]){
                         img = each_output["images"][img_index];
-                        add_image_ids.push(img["name"]);
-                        html_element = html_element + "<a id=\""+img["name"]+"\" class=\"luminous luminous-img zoom-in\" href=\"data:image/"+img["type"]+";base64,"+img["data"]+"\" title=\""+img["name"]+"\"><img src=\"data:image/"+img["type"]+";base64,"+img["data"]+"\" style=\"height: 180px;\" alt=\""+img["name"]+"\"></a>";
+                        add_image_ids.push(key_log_name+namespace_separator+img["name"]);
+                        // it is possible to embed img at <a> tag href like href=\"data:image/"+img["type"]+";base64,"+img["data"]+"\", but it is redundant,
+                        // and also for implementing thumbnail resizing, and improving UX
+                        html_element = html_element + "<a id=\""+key_log_name+namespace_separator+img["name"]+"\" class=\"luminous luminous-img zoom-in\" href=\"api/log/"+key_log_name+"/output/image/"+img["name"]+"\" title=\""+img["name"]+"\"><img class=\"thumbnail\" src=\"data:image/"+img["type"]+";base64,"+img["data"]+"\" alt=\""+img["name"]+"\"></a>";
                     }
 
                     if(each_output["desc"].length > 0){

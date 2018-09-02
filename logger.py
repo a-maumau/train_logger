@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image
 
 from .utilities.path_util import mkdir
+from .global_names import global_names
 
 HAS_TB = True
 HAS_GS_ENNV = True
@@ -413,8 +414,8 @@ class LogWriter(object):
                 self.tb_logger.add_scalar(name_space, val)
 
 class OutputWriter(object):
-    output_folder = "outputs"
-    output_image_folder = "images"
+    output_folder = global_names.output_folder
+    output_image_folder = global_names.output_image_folder
 
     def __init__(self, schema_list_name="output_schema_list.txt", output_root="./log", blocking=False, suppress_err=True, msg_logger=None):
         """ 
