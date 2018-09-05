@@ -222,7 +222,7 @@ class TrainLogger(object):
 
             color_print("trying to start http server...", terminal_color.fg.BLACK, terminal_color.bg.GREEN)
             try:
-                self.http_server = HTTPServer(log_dir=self.log_dir, bind_host=self.http_bind_host, bind_port=self.http_bind_port, quiet=True)
+                self.http_server = HTTPServer(log_dir=self.log_dir, bind_host=self.http_bind_host, bind_port=self.http_bind_port, quiet=False)
                 self.http_server.start(use_thread=True)
                 color_print("http server hosted on {host}:{port}".format(host=self.http_bind_host, port=self.http_bind_port),
                             terminal_color.fg.BLACK,
