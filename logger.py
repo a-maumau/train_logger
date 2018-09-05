@@ -502,8 +502,8 @@ class OutputWriter(object):
 
             on the output tab on web browser, it show up like
 
-                setup_output:name     |  ________
-                    setup_output:desc | |        |
+                    setup:name        |  ________
+                           setup:desc | |        |
                                       | |  img   |
                                       | |        |
                                       | |________|
@@ -512,14 +512,14 @@ class OutputWriter(object):
                                       |  - desc_items[1]
                                       |  - desc_items[2]
 
-                setup_output:~ is value of setup_output function
+                setup:~ is value of setup_output function
 
             if you don't set any desc and desc_items,
             you can line up the images.
             when you call twice, it will look like
 
-            setup_output:name         |  ________   ________
-                    setup_output:desc | |        | |        |
+                    setup:name        |  ________   ________
+                           setup:desc | |        | |        |
                                       | |  img1  | |  img2  |
                                       | |        | |        |
                                       | |________| |________|
@@ -527,8 +527,8 @@ class OutputWriter(object):
 
             also multiple img of argument will do the same thing.
 
-            setup_output:name         |  ________   ________
-                    setup_output:desc | |        | |        |
+                    setup:name        |  ________   ________
+                           setup:desc | |        | |        |
                                       | |  img1  | |  img2  |
                                       | |        | |        |
                                       | |________| |________|
@@ -570,7 +570,7 @@ class OutputWriter(object):
     def __save_image(self, img):
         """
             args:
-                img
+                PIL.Image or list of PIL Image
              
             return:
                 list of saved file names

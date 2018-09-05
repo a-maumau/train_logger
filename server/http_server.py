@@ -61,12 +61,21 @@ def parse_log(log_folder, exclude_namespace=[]):
     with open(os.path.join(log_folder, global_names.log_info_file_name), "r") as f:
         parsed_data["info"] = yaml.load(f)
 
+    stride = parsed_data["fetch_stride"]
+
     for namespace in parsed_data["info"]["log_info"]["namespaces"]:
         if namespace in exclude_namespace:
             continue
 
         with open(os.path.join(log_folder, parsed_data["info"]["log_info"]["logs"][namespace]["file_name"]), "r") as f:
-            parsed_data["data"][namespace] = f.read()
+            csv_string_line = f.readlines()
+
+        csv_stride_string = ""
+        for i, line in enumerate(csv_string_line):
+            if i%stride == 0 or i == 1:
+                csv_stride_string += line
+
+        parsed_data["data"][namespace] = csv_stride_string
 
     return parsed_data
 
@@ -82,13 +91,21 @@ def fetch_csv_data(log_name, log_folder, request_dict):
                 fetch_request_line = request_dict[namespace]["request"]
 
                 with open(os.path.join(log_folder, yaml_data["log_info"]["logs"][namespace]["file_name"]), "r") as f:
-                    csv_data = f.read()
+                    csv_string_line = f.readlines()
 
+                csv_stride_string = ""
+                for i, line in enumerate(csv_string_line):
+                    if i%stride == 0 or (i == 1 and fetch_request_line < 2):
+                        csv_stride_string += line
+
+                """
                 find_result = re.finditer("\n", csv_data)
                 for i, find in enumerate(find_result):
                     if i == fetch_request_line-1:
                         requested_csv_data[log_name]["data"][namespace] = csv_data[0:re.search("\n", csv_data).end()] + csv_data[find.end():]
                         break
+                """
+                requested_csv_data[log_name]["data"][namespace] = csv_stride_string
 
             except Exception as e:
                 if DEBUG:
