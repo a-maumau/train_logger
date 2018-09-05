@@ -61,7 +61,7 @@ def parse_log(log_folder, exclude_namespace=[]):
     with open(os.path.join(log_folder, global_names.log_info_file_name), "r") as f:
         parsed_data["info"] = yaml.load(f)
 
-    stride = parsed_data["fetch_stride"]
+    stride = parsed_data["info"]["fetch_stride"]
 
     for namespace in parsed_data["info"]["log_info"]["namespaces"]:
         if namespace in exclude_namespace:
@@ -85,6 +85,8 @@ def fetch_csv_data(log_name, log_folder, request_dict):
     try:
         with open(os.path.join(log_folder, global_names.log_info_file_name), "r") as f:
             yaml_data = yaml.load(f)
+
+        stride = yaml_data["fetch_stride"]
 
         for namespace in request_dict:
             try:
