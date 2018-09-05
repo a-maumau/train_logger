@@ -20,7 +20,7 @@ from PIL import Image
 from ..utilities.path_util import isdir, isexist
 from ..global_names import global_names
 
-DEBUG = True
+DEBUG = False
 
 def print_error(e):
     traceback.print_exc()
