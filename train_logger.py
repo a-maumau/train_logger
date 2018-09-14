@@ -16,7 +16,7 @@ from .utilities import terminal_color
 HAS_NOTI = True
 # just in case
 try:
-    from notificator import Notificator
+    from ..notificator import Notificator
 except Exception as e:
     #import traceback
     #traceback.print_exc()
