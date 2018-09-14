@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image
 
 from .utilities.path_util import mkdir
+from .global_names import global_names
 
 HAS_TB = True
 HAS_GS_ENNV = True
@@ -413,8 +414,8 @@ class LogWriter(object):
                 self.tb_logger.add_scalar(name_space, val)
 
 class OutputWriter(object):
-    output_folder = "outputs"
-    output_image_folder = "images"
+    output_folder = global_names.output_folder
+    output_image_folder = global_names.output_image_folder
 
     def __init__(self, schema_list_name="output_schema_list.txt", output_root="./log", blocking=False, suppress_err=True, msg_logger=None):
         """ 
@@ -501,8 +502,8 @@ class OutputWriter(object):
 
             on the output tab on web browser, it show up like
 
-                setup_output:name     |  ________
-                    setup_output:desc | |        |
+                    setup:name        |  ________
+                           setup:desc | |        |
                                       | |  img   |
                                       | |        |
                                       | |________|
@@ -511,14 +512,14 @@ class OutputWriter(object):
                                       |  - desc_items[1]
                                       |  - desc_items[2]
 
-                setup_output:~ is value of setup_output function
+                setup:~ is value of setup_output function
 
             if you don't set any desc and desc_items,
             you can line up the images.
             when you call twice, it will look like
 
-            setup_output:name         |  ________   ________
-                    setup_output:desc | |        | |        |
+                    setup:name        |  ________   ________
+                           setup:desc | |        | |        |
                                       | |  img1  | |  img2  |
                                       | |        | |        |
                                       | |________| |________|
@@ -526,8 +527,8 @@ class OutputWriter(object):
 
             also multiple img of argument will do the same thing.
 
-            setup_output:name         |  ________   ________
-                    setup_output:desc | |        | |        |
+                    setup:name        |  ________   ________
+                           setup:desc | |        | |        |
                                       | |  img1  | |  img2  |
                                       | |        | |        |
                                       | |________| |________|
@@ -569,7 +570,7 @@ class OutputWriter(object):
     def __save_image(self, img):
         """
             args:
-                img
+                PIL.Image or list of PIL Image
              
             return:
                 list of saved file names

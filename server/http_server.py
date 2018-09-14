@@ -4,21 +4,23 @@ import json
 import re
 import threading
 import traceback
+from io import BytesIO
 
 SERVER_MODULE_MISSING = False
 try:
-    from flask import Flask, render_template, redirect, request
+    from flask import Flask, render_template, redirect, request, helpers, send_file
     from flask_classful import FlaskView, route
     from jinja2 import FileSystemLoader
 except:
     SERVER_MODULE_MISSING = True
 
+import base64
 from PIL import Image
 
 from ..utilities.path_util import isdir, isexist
 from ..global_names import global_names
 
-print_error = False
+DEBUG = False
 
 def print_error(e):
     traceback.print_exc()
@@ -59,12 +61,21 @@ def parse_log(log_folder, exclude_namespace=[]):
     with open(os.path.join(log_folder, global_names.log_info_file_name), "r") as f:
         parsed_data["info"] = yaml.load(f)
 
+    stride = parsed_data["info"]["fetch_stride"]
+
     for namespace in parsed_data["info"]["log_info"]["namespaces"]:
         if namespace in exclude_namespace:
             continue
 
         with open(os.path.join(log_folder, parsed_data["info"]["log_info"]["logs"][namespace]["file_name"]), "r") as f:
-            parsed_data["data"][namespace] = f.read()
+            csv_string_line = f.readlines()
+
+        csv_stride_string = ""
+        for i, line in enumerate(csv_string_line):
+            if i%stride == 0 or i == 1:
+                csv_stride_string += line
+
+        parsed_data["data"][namespace] = csv_stride_string
 
     return parsed_data
 
@@ -75,31 +86,42 @@ def fetch_csv_data(log_name, log_folder, request_dict):
         with open(os.path.join(log_folder, global_names.log_info_file_name), "r") as f:
             yaml_data = yaml.load(f)
 
+        stride = yaml_data["fetch_stride"]
+
         for namespace in request_dict:
             try:
                 fetch_request_line = request_dict[namespace]["request"]
 
                 with open(os.path.join(log_folder, yaml_data["log_info"]["logs"][namespace]["file_name"]), "r") as f:
-                    csv_data = f.read()
+                    csv_string_line = f.readlines()
 
+                csv_stride_string = ""
+                for i, line in enumerate(csv_string_line):
+                    if i%stride == 0 or (i == 1 and fetch_request_line < 2):
+                        csv_stride_string += line
+
+                """
                 find_result = re.finditer("\n", csv_data)
                 for i, find in enumerate(find_result):
                     if i == fetch_request_line-1:
                         requested_csv_data[log_name]["data"][namespace] = csv_data[0:re.search("\n", csv_data).end()] + csv_data[find.end():]
                         break
+                """
+                requested_csv_data[log_name]["data"][namespace] = csv_stride_string
 
             except Exception as e:
-                if print_error:
+                if DEBUG:
                     print_error(e)
 
     except Exception as e:
-        if print_error:
+        if DEBUG:
             print_error(e)
 
     return requested_csv_data
 
 def fetch_output_data(log_name, log_folder, request_dict):
     requested_csv_data = {log_name:{"data":[]}}
+    #img.thumbnail(size)
 
     try:
         # open the schema list file.
@@ -120,11 +142,17 @@ def fetch_output_data(log_name, log_folder, request_dict):
                     for pack in yaml_data["outputs"]:
                         output["outputs"].append({"images":[]})
                         for i, img_name in enumerate(pack["image"]):
-                            img_name = re.search("/[^\n]*\Z", pack["image"][i]).group().replace("/", "")
+                            img_name = re.search("/[^/\n]*\Z", pack["image"][i]).group().replace("/", "")
                             img_type = re.search(".[a-zA-z]*\Z", pack["image"][i]).group().replace(".", "")
-                            output["outputs"][-1]["images"].append({"data":base64.encodestring(open(os.path.join(log_folder, pack["image"][i]), "rb").read()).decode("utf-8"),
-                                                                    "name":img_name,
-                                                                    "type":img_type})
+                            img = Image.open(os.path.join(log_folder, pack["image"][i]))
+                            w, h = img.size
+                            img.thumbnail((global_names.img_thumbnail_height, global_names.img_thumbnail_height))
+                            # StringIO() is not able at python3
+                            with BytesIO() as buf:
+                                img.save(buf, img.format)
+                                output["outputs"][-1]["images"].append({"data":base64.encodestring(buf.getvalue()).decode("utf-8"),
+                                                                        "name":img_name,
+                                                                        "type":img_type})
 
                         output["outputs"][-1]["desc"] = pack["desc"]
                         output["outputs"][-1]["desc_items"] = pack["desc_items"]
@@ -133,11 +161,11 @@ def fetch_output_data(log_name, log_folder, request_dict):
                        requested_csv_data[log_name]["data"].append(output)
 
                 except Exception as e:
-                    if print_error:
+                    if DEBUG:
                         print_error(e)
     
     except Exception as e:
-        if print_error:
+        if DEBUG:
             print_error(e)
 
     return requested_csv_data
@@ -237,6 +265,7 @@ def fetch_update(json_data, log_dir):
 class APIView(FlaskView):
     log_dir = "log"
     log_settings = {}
+    thumbnail_size = 180
 
     @classmethod
     def set_log_directory(cls, log_dir_path):
@@ -288,6 +317,7 @@ class APIView(FlaskView):
 
         return json.dumps(fetch_update(client_request, self.log_dir))
 
+    @route('/log/<log_name>')
     def log(self, log_name):
         return_data = {"log_data":[]}
         data_dict = fetch_data(os.path.join(self.log_dir, log_name))
@@ -296,6 +326,13 @@ class APIView(FlaskView):
             return_data["log_data"] = {log_name:data_dict}
 
         return json.dumps(return_data)
+
+    @route('/log/<string:log_name>/output/image/<string:img_name>')
+    def log_output_img(self, log_name, img_name):
+        img_path = os.path.join(self.log_dir, log_name, global_names.output_folder, global_names.output_image_folder, img_name)
+        response = helpers.make_response(open(img_path, "rb").read())
+        response.headers["Content-type"] = "Image"
+        return response
 
     @route('/update_settings', methods=["POST"])
     def update_settings(self):
@@ -314,6 +351,7 @@ class MainView(FlaskView):
 class HTTPServer(object):
     def __init__(self, log_dir, name="http server for train logger", bind_host="", bind_port=8080, quiet=False):
         # black magic... but we need this module path...
+        """
         try:
             raise
         except Exception as e:
@@ -323,7 +361,9 @@ class HTTPServer(object):
                 if file_line is not None:
                     file_line_str = file_line.group()
                     self.this_module_path = re.sub("http_server.py", "", re.sub('\s*File\s"', "", file_line_str))
+        """
 
+        self.this_module_path = re.sub("http_server.py", "", re.sub('\s*File\s"', "", os.path.abspath(__file__)))
         self.log_dir = log_dir
         self.name = name
         self.bind_host = bind_host
