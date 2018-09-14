@@ -16,7 +16,7 @@ from .utilities import terminal_color
 HAS_NOTI = True
 # just in case
 try:
-    from notificator import Notificator
+    from ..notificator import Notificator
 except Exception as e:
     #import traceback
     #traceback.print_exc()
@@ -45,7 +45,7 @@ class TrainLogger(object):
     message_namespace_format = "{}::"
     message_format = "{}"
 
-    def __init__(self, log_dir="./log", log_name="log_output", namespaces=None, arguments=None, notificate=False, suppress_err=True):
+    def __init__(self, log_dir="./log", log_name="log_output", namespaces=None, arguments=None, notificate=False, suppress_err=True, visualize_fetch_stride=1):
         """
             log_dir: str
                 root directory of saving log.
@@ -72,6 +72,14 @@ class TrainLogger(object):
             suppress_err: bool
                 suppress the errors. if you want to see the error, set to False.
 
+            visualize_fetch_stride: int
+                stride num of visualization with http server.
+                only effect on csv logs.
+                log graph will print out with this stride at x-axis.
+                if you set this to 10, and the x-axis start from 1,
+                fetched data's axis value will be like 1, 10, 20, ...
+                first row will be always fetched.
+
             ####################################################################
             file trees
                 log_dir/
@@ -97,9 +105,10 @@ class TrainLogger(object):
         """
 
         self.log_dir = log_dir
-        self.log_name = log_name
+        self.log_name = log_name.replace(" ", "_")
         self.arguments = arguments
         self.suppress_err = suppress_err
+        self.visualize_fetch_stride = visualize_fetch_stride
         self.timestamp_for_file = "{}".format(datetime.now().strftime("%Y%m%d_%H-%M-%S"))
         self.timestamp = self.timestamp_for_file.replace("-", ":").replace("_", " ")
         self.log_save_path = os.path.join(self.log_dir, "{}_{}".format(self.log_name, self.timestamp_for_file))
@@ -129,6 +138,8 @@ class TrainLogger(object):
 
     def __make_log_info_file(self):
         self.log_info_data = self.__get_log_info()
+        self.log_info_data["fetch_stride"] = self.visualize_fetch_stride
+
         try:
             if isinstance(self.arguments, dict):
                 self.log_info_data["arguments"] = []
@@ -195,7 +206,7 @@ class TrainLogger(object):
             self.msg_server = MessageLogServer(os.path.join(self.log_save_path, self.msg_filename),
                                                self.msg_bind_host, self.msg_bind_port, 8, blocking=False)
             self.msg_server.start(use_thread=True)
-            color_print("hosted on {host}:{port}".format(host=self.msg_bind_host, port=self.msg_bind_port),
+            color_print("message server hosted on {host}:{port}".format(host=self.msg_bind_host, port=self.msg_bind_port),
                         terminal_color.fg.BLACK,
                         terminal_color.bg.GREEN)
 
@@ -206,13 +217,16 @@ class TrainLogger(object):
 
     def start_http_server(self, bind_host="127.0.0.1", bind_port=8080):
         if not http_server.SERVER_MODULE_MISSING:
-            self.http_bind_host=bind_host
+            self.http_bind_host=bind_host if bind_host != "" else "0.0.0.0"
             self.http_bind_port=bind_port
 
             color_print("trying to start http server...", terminal_color.fg.BLACK, terminal_color.bg.GREEN)
             try:
                 self.http_server = HTTPServer(log_dir=self.log_dir, bind_host=self.http_bind_host, bind_port=self.http_bind_port, quiet=True)
                 self.http_server.start(use_thread=True)
+                color_print("http server hosted on {host}:{port}".format(host=self.http_bind_host, port=self.http_bind_port),
+                            terminal_color.fg.BLACK,
+                            terminal_color.bg.GREEN)
 
             except Exception as e:
                 if not self.suppress_err:
@@ -284,7 +298,7 @@ class TrainLogger(object):
         self.msg_server.log(msg)
 
     def setup_output(self, name, desc="", img_name_preffix="_img", img_ext=".png"):
-        self.output_writer.setup(name, desc, img_name_preffix, img_ext)
+        self.output_writer.setup(name.replace(" ", "_"), desc, img_name_preffix, img_ext)
 
     def pack_output(self, img=None, desc="", desc_items=[]):
         self.output_writer.pack(img, desc, desc_items)
