@@ -459,7 +459,7 @@ class OutputWriter(object):
         mkdir(self.output_schema_dir)
         mkdir(self.output_image_dir)
 
-    def setup(self, name, desc, img_name_preffix="_img", img_ext=".png"):
+    def setup(self, name, desc, img_name_suffix="img", img_ext=".png"):
         """
             args:
                 data: list
@@ -483,7 +483,11 @@ class OutputWriter(object):
 
         self.output_name = name
         self.output_desc = desc
-        self.img_name_preffix = img_name_preffix
+        if len(img_name_suffix) > 0:
+            self.img_name_suffix = "_{}_".format(img_name_suffix)
+        else:
+            self.img_name_suffix = img_name_suffix
+
         self.img_ext = img_ext
 
         self.img_count = 0
@@ -492,13 +496,17 @@ class OutputWriter(object):
 
         self.schema = {"output_name":self.output_name, "output_desc":self.output_desc, "outputs":[]}
 
-    def pack(self, img=None, desc="", desc_items=[]):
+    def pack(self, img=None, desc="", desc_items=[], additional_name="", not_in_schema=False):
         """
             img:
                 for image
 
             desc: str
             desc_items: list of str
+
+            not_in_schema: bool
+                if not_in_schema is True, it will not recorded in schema file.
+                And also the desc and desc_items will be ignored.
 
             on the output tab on web browser, it show up like
 
@@ -538,8 +546,13 @@ class OutputWriter(object):
                                       |  - desc_items3[2]
         """
 
-        if self.schema_writer is not None:
-            self.schema["outputs"].append({"image":self.__save_image(img), "desc":desc, "desc_items":desc_items})
+        if len(additional_name) > 0:
+            additional_name = "_{}".format(additional_name)
+
+        if self.schema_writer is not None and not not_in_schema:
+            self.schema["outputs"].append({"image":self.__save_image(img, additional_name), "desc":desc, "desc_items":desc_items})
+        else:
+            self.__save_image(img, additional_name)
 
     def flush(self):
         self.schema_list_logger.write(os.path.join(self.schema_base, self.output_name+".yaml")+"\n")
@@ -567,7 +580,7 @@ class OutputWriter(object):
     def write(self):
         self.flush()
 
-    def __save_image(self, img):
+    def __save_image(self, img, additional_name=""):
         """
             args:
                 PIL.Image or list of PIL Image
@@ -581,47 +594,48 @@ class OutputWriter(object):
 
             try:
                 if isinstance(img, Image.Image):
-                    save_path = os.path.join(self.output_image_dir, "{}{}_{}{}".format(
-                                                                      self.output_name,
-                                                                      self.img_name_preffix,
-                                                                      self.img_count,
-                                                                      self.img_ext))
-                    log_path = os.path.join(self.output_image_base, "{}{}_{}{}".format(
-                                                                    self.output_name,
-                                                                    self.img_name_preffix,
-                                                                    self.img_count,
-                                                                    self.img_ext))
+                    save_name = "{}{}{}{}{}".format(self.output_name,
+                                                    self.img_name_suffix,
+                                                    self.img_count,
+                                                    additional_name,
+                                                    self.img_ext)
+                    save_path = os.path.join(self.output_image_dir, save_name)
+                    log_path = os.path.join(self.output_image_base, save_name)
+
                     img.save(save_path)
                     img_path_list.append(log_path)
+                    
                     self.img_count += 1
 
                 elif isinstance(img, list):
                     if isinstance(img[0], Image.Image):
                         for _img in img:
-                            save_path = os.path.join(self.output_image_dir, "{}{}_{}{}".format(
-                                                                              self.output_name,
-                                                                              self.img_name_preffix,
-                                                                              self.img_count,
-                                                                              self.img_ext))
-                            log_path = os.path.join(self.output_image_base, "{}{}_{}{}".format(
-                                                                            self.output_name,
-                                                                            self.img_name_preffix,
-                                                                            self.img_count,
-                                                                            self.img_ext))
+                            save_name = "{}{}{}{}{}".format(self.output_name,
+                                                            self.img_name_suffix,
+                                                            self.img_count,
+                                                            additional_name,
+                                                            self.img_ext)
+                            save_path = os.path.join(self.output_image_dir, save_name)
+                            log_path = os.path.join(self.output_image_base, save_name)
+                            
                             _img.save(save_path)
                             img_path_list.append(log_path)
+
                             self.img_count += 1
 
                 else:
-                    raise
+                    raise ValueError("not PIL.Image.Image or list of PIL.Image.Image")
 
             except Exception as e:
+                if not self.suppress_err:
+                    print(e)
+
                 if self.msg_logger is not None:
                     log_message = "{time}{tag}{namespace}{msg}".format(
-                                time="[{}]".format(datetime.now().strftime("%Y%m%d %H:%M:%S")),
-                                tag="[ERROR, INTERNAL]",
-                                namespace="OutputWriter::{}::".format(self.output_name),
-                                msg="cannot save image, {}".format(e))
+                                    time="[{}]".format(datetime.now().strftime("%Y%m%d %H:%M:%S")),
+                                    tag="[ERROR, INTERNAL]",
+                                    namespace="OutputWriter::{}::".format(self.output_name),
+                                    msg="cannot save image, {}".format(e))
 
                     self.msg_logger.write(log_message+"\n")
                     self.msg_logger.flush()
