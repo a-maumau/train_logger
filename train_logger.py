@@ -1,5 +1,8 @@
 import os
+import sys
+import signal
 import threading
+import traceback
 from datetime import datetime
 
 import git
@@ -18,12 +21,10 @@ HAS_NOTI = True
 try:
     from ..notificator import Notificator
 except Exception as e:
-    #import traceback
-    #traceback.print_exc()
-    print("running without notificator.")
+    print_error(e)
+    color_print("running without notificator.", terminal_color.fg.WHITE, terminal_color.bg.RED)
     HAS_NOTI=False
 
-import traceback
 def print_error(e):
     traceback.print_exc()
     print(e)
@@ -127,7 +128,7 @@ class TrainLogger(object):
 
         # setting up notificator
         if self.has_noti and notificate:
-            self.notificator = Notificator()
+            self.notificator = Notificator(suppress_err=suppress_err)
         else:
             self.notificator = None
 
@@ -135,6 +136,17 @@ class TrainLogger(object):
             self.add_log_namespace(namespaces)
         else:
             self.__make_log_info_file()
+
+        signal.signal(signal.SIGTERM, self.handler)
+        signal.signal(signal.SIGINT, handler)
+
+    def __detect_kill(self, signal, frame):
+        self.log_message("detect {}".format(signal), "INFO", "train_logger")
+        sys.exit(0)
+
+    def __detect_ctrl_c(self, signal, frame):
+        self.log_message("detect {}".format(signal), "INFO", "train_logger")
+        sys.exit(0)
 
     def __make_log_info_file(self):
         self.log_info_data = self.__get_log_info()
@@ -183,6 +195,12 @@ class TrainLogger(object):
                 self.git_info = {"branch_name": "no data", "branch_hash": "no data"}
 
         return self.git_info
+
+    def mkdir(self, path):
+        joint_path = os.path.join(self.log_save_path, path)
+        mkdir(joint_path)
+
+        return joint_path
 
     def add_log_namespace(self, namespaces):
         for name, headers in namespaces.items():
@@ -300,8 +318,8 @@ class TrainLogger(object):
     def setup_output(self, name, desc="", img_name_preffix="_img", img_ext=".png"):
         self.output_writer.setup(name.replace(" ", "_"), desc, img_name_preffix, img_ext)
 
-    def pack_output(self, img=None, desc="", desc_items=[]):
-        self.output_writer.pack(img, desc, desc_items)
+    def pack_output(self, img=None, desc="", desc_items=[], not_in_schema=False):
+        self.output_writer.pack(img, desc, desc_items, not_in_schema)
 
     def flush_output(self):
         self.output_writer.flush()
