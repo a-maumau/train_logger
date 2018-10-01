@@ -21,8 +21,9 @@ HAS_NOTI = True
 try:
     from ..notificator import Notificator
 except Exception as e:
-    print_error(e)
-    color_print("running without notificator.", terminal_color.fg.WHITE, terminal_color.bg.RED)
+    traceback.print_exc()
+    print(e)
+    print("running without notificator.")
     HAS_NOTI=False
 
 def print_error(e):
@@ -124,7 +125,10 @@ class TrainLogger(object):
         self.http_server = None
         self.msg_server = None
         self.msg_logger = open(os.path.join(self.log_save_path, self.msg_filename), "w")
-        self.output_writer = OutputWriter(schema_list_name=self.output_schema_file_name, output_root=self.log_save_path, msg_logger=self.msg_logger)
+        self.output_writer = OutputWriter(schema_list_name=self.output_schema_file_name,
+                                          output_root=self.log_save_path,
+                                          msg_logger=self.msg_logger,
+                                          suppress_err=self.suppress_err)
 
         # setting up notificator
         if self.has_noti and notificate:
@@ -137,15 +141,15 @@ class TrainLogger(object):
         else:
             self.__make_log_info_file()
 
-        signal.signal(signal.SIGTERM, self.handler)
-        signal.signal(signal.SIGINT, handler)
+        signal.signal(signal.SIGTERM, self.__detect_kill)
+        signal.signal(signal.SIGINT, self.__detect_ctrl_c)
 
     def __detect_kill(self, signal, frame):
-        self.log_message("detect {}".format(signal), "INFO", "train_logger")
+        self.log_message("detect signal: SIGTERM, num:{}".format(signal), "INFO", "train_logger")
         sys.exit(0)
 
     def __detect_ctrl_c(self, signal, frame):
-        self.log_message("detect {}".format(signal), "INFO", "train_logger")
+        self.log_message("detect signal: SIGINT, num:{}".format(signal), "INFO", "train_logger")
         sys.exit(0)
 
     def __make_log_info_file(self):
@@ -318,8 +322,8 @@ class TrainLogger(object):
     def setup_output(self, name, desc="", img_name_preffix="_img", img_ext=".png"):
         self.output_writer.setup(name.replace(" ", "_"), desc, img_name_preffix, img_ext)
 
-    def pack_output(self, img=None, desc="", desc_items=[], not_in_schema=False):
-        self.output_writer.pack(img, desc, desc_items, not_in_schema)
+    def pack_output(self, img=None, desc="", desc_items=[], additional_name="", not_in_schema=False):
+        self.output_writer.pack(img, desc, desc_items, additional_name.replace(" ", "_"), not_in_schema)
 
     def flush_output(self):
         self.output_writer.flush()

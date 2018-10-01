@@ -599,7 +599,7 @@ class OutputWriter(object):
                                                     self.img_count,
                                                     additional_name,
                                                     self.img_ext)
-                    save_path = os.path.join(self.output_image_dir)
+                    save_path = os.path.join(self.output_image_dir, save_name)
                     log_path = os.path.join(self.output_image_base, save_name)
 
                     img.save(save_path)
@@ -624,15 +624,18 @@ class OutputWriter(object):
                             self.img_count += 1
 
                 else:
-                    raise
+                    raise ValueError("not PIL.Image.Image or list of PIL.Image.Image")
 
             except Exception as e:
+                if not self.suppress_err:
+                    print(e)
+
                 if self.msg_logger is not None:
                     log_message = "{time}{tag}{namespace}{msg}".format(
-                                time="[{}]".format(datetime.now().strftime("%Y%m%d %H:%M:%S")),
-                                tag="[ERROR, INTERNAL]",
-                                namespace="OutputWriter::{}::".format(self.output_name),
-                                msg="cannot save image, {}".format(e))
+                                    time="[{}]".format(datetime.now().strftime("%Y%m%d %H:%M:%S")),
+                                    tag="[ERROR, INTERNAL]",
+                                    namespace="OutputWriter::{}::".format(self.output_name),
+                                    msg="cannot save image, {}".format(e))
 
                     self.msg_logger.write(log_message+"\n")
                     self.msg_logger.flush()
